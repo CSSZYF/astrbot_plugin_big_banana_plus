@@ -70,7 +70,7 @@ class BigBanana(Star):
         self.prefix_list = prefix_config.get("prefix_list", [])
 
         # 数据目录
-        data_dir = StarTools.get_data_dir("astrbot_plugin_big_banana")
+        data_dir = StarTools.get_data_dir("astrbot_plugin_big_banana_plus")
         self.refer_images_dir = data_dir / "refer_images"
         self.save_dir = data_dir / "save_images"
         # 临时文件目录
@@ -401,7 +401,7 @@ class BigBanana(Star):
         except TimeoutError as _:
             yield event.plain_result("❌ 超时了，操作已取消！")
         except Exception as e:
-            logger.error(f"大香蕉添加提示词出现错误: {e}", exc_info=True)
+            logger.error(f"大大香蕉添加提示词出现错误: {e}", exc_info=True)
             yield event.plain_result("❌ 处理时发生了一个内部错误。")
         finally:
             event.stop_event()
@@ -551,7 +551,7 @@ class BigBanana(Star):
                 except TimeoutError as _:
                     yield event.plain_result("❌ 超时了，操作已取消！")
                 except Exception as e:
-                    logger.error(f"大香蕉删除提示词出现错误: {e}", exc_info=True)
+                    logger.error(f"大大香蕉删除提示词出现错误: {e}", exc_info=True)
                     yield event.plain_result("❌ 处理时发生了一个内部错误。")
                 finally:
                     event.stop_event()

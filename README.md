@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🍌 AstrBot Nano Banana Pro 图片生成插件 🍌
+# 🍌 AstrBot Nano Banana Pro 图片生成插件 (Plus增强版) 🍌
 
-![:访问量](https://count.getloli.com/@astrbot_plugin_big_banana?name=astrbot_plugin_big_banana&theme=rule34&padding=5&offset=0&scale=1&pixelated=1&darkmode=auto)
+![:访问量](https://count.getloli.com/@astrbot_plugin_big_banana_plus?name=astrbot_plugin_big_banana_plus&theme=rule34&padding=5&offset=0&scale=1&pixelated=1&darkmode=auto)
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org)
@@ -70,7 +70,7 @@
 - `--aspect_ratio` 仅 Gemini 规范生效
 - `--image_size`、`--google_search` 仅 Gemini 规范，gemini-3 前缀的模型生效
 
-\*[4] 支持添加预设图片参考，使用英文 `,` 分割多张图片。需要将文件放在插件数据目录 `plugin_data/astrbot_plugin_big_banana/refer_images/` 文件夹，使用示例 `--refer_images 文件名1,文件名2`。参数值中不能有空格。
+\*[4] 支持添加预设图片参考，使用英文 `,` 分割多张图片。需要将文件放在插件数据目录 `plugin_data/astrbot_plugin_big_banana_plus/refer_images/` 文件夹，使用示例 `--refer_images 文件名1,文件名2`。参数值中不能有空格。
 
 \*[5] 消息收集模式旨在于通过发送多条消息，实现多提示词拼接和图片收集，解决单条消息的局限性问题（例如图片和文本不能同时发送，或者消息平台只接受第一张图片等）。发送「开始」将使用收集到的提示词和图片进行图片生成；发送「取消」可以取消操作。对于 aiocqhttp，收集模式结束后，如果图片数量未满足最低要求，插件仍然会自动添加QQ头像作为图片参考。
 

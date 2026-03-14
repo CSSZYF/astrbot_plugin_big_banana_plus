@@ -1,6 +1,6 @@
-name: astrbot_plugin_big_banana
-display_name: 🍌大香蕉🍌
-desc: 图片生成插件，支持Gemini、OpenAI、VertexAI逆向等提供商以及高级配置参数。
+name: astrbot_plugin_big_banana_plus
+display_name: 🍌大大香蕉🍌
+desc: 图片生成插件，支持Gemini、OpenAI、VertexAI逆向等提供商以及高级配置参数。(Plus增强版)
 version: v0.1.9
-author: Sukafon & CatCat
-repo: https://github.com/sukafon/astrbot_plugin_big_banana
+author: CSSZYF
+repo: https://github.com/CSSZYF/astrbot_plugin_big_banana_plus

@@ -30,26 +30,27 @@ class BigBananaPromptTool(FunctionTool[AstrAgentContext]):
     name: str = "banana_preset_prompt"  # 工具名称
     # fmt: off
     description: str = (
-"This is a helper tool for the banana_image_generation tool."
-"It is used to retrieve preset prompts so that you can reference and refine them before"
-"passing the final prompt to the banana_image_generation tool for image generation."
-)  # 工具描述
+        "A helper tool for banana_image_generation. "
+        "Use it to retrieve preset prompt names and their content, "
+        "so you can review and refine them before passing to banana_image_generation."
+    )  # 工具描述
     parameters: dict = Field(
         default_factory=lambda: {
             "type": "object",
             "properties": {
                 "get_preset_prompt": {
                     "type": "string",
-                    "description": ("If the user requests an image generated with a specific"
-"preset, you must ask for the exact preset name. Once provided, set this parameter to that name."
-"The tool will then return the full preset prompt, allowing you to review and refine it as"
-"needed before passing the final version to banana_image_generation."),
+                    "description": (
+                        "The exact preset name to retrieve. "
+                        "Set this to the preset name the user specified. "
+                        "Returns the full preset prompt for review."
+                    ),
                 },
                 "get_preset_name_list": {
                     "type": "boolean",
-                    "description": ("Set this parameter to true only when you need to retrieve"
-"the full list of available preset names. After obtaining the list, you can set the name you want"
-"to inspect in the get_preset_prompt parameter to retrieve its corresponding preset prompt."),
+                    "description": (
+                        "Set to true to get the list of all available preset names."
+                    ),
                 },
             },
             "required": [],
@@ -125,44 +126,42 @@ class BigBananaTool(FunctionTool[AstrAgentContext]):
     name: str = "banana_image_generation"  # 工具名称
     # fmt: off
     description: str = (
-"This tool uses the Nano Banana Pro model for image generation."
-"It supports both text-based generation and image-reference generation. When a user requests"
-"generation based on an image, you must first verify whether a valid image is present"
-"in the user's current message or in the message they are replying to. Textual pointers"
-'such as "that one" "the one above" or similar expressions are not acceptable as valid'
-"image inputs. The user must provide an actual image file for the request to proceed."
-"In special cases, if the user says to use their avatar or mentions another user's avatar,"
-"there is no need to explicitly provide an image. The tool will automatically fetch"
-"the corresponding user avatar as a reference. But you must first ensure that the message"
-"has @-mentioned the target user, or that it is using the sender's own avatar."
-"Prioritize the tool response as the highest priority event,"
-"taking precedence over chat history.")  # 工具描述
+        "Generate images using the Nano Banana Pro model. "
+        "Supports text-to-image and image-reference generation. "
+        "For image-reference, the user must provide an actual image in their message or reply. "
+        "Textual pointers like 'that one' or 'the one above' are NOT valid image inputs. "
+        "If the user wants to use their own or another user's avatar, "
+        "the tool will automatically fetch it (the target user must be @-mentioned). "
+        "Prioritize this tool's response over chat history."
+    )  # 工具描述
     parameters: dict = Field(
         default_factory=lambda: {
             "type": "object",
             "properties": {
                 "prompt": {
                     "type": "string",
-                    "description": ("Refine the image generation prompt to ensure it is clear,"
-"detailed, and accurately aligned with the user's intent by elaborating on the visual elements"
-"in a logical sequence that explicitly describes specific physical actions, nuanced facial"
-"expressions, and the overall color scheme with lighting atmosphere. This parameter must be"
-"populated with the full, descriptive prompt content rather than just a preset name,"
-"even if derived from one, to guarantee the generation of a vivid and strictly defined image."),
+                    "description": (
+                        "The image generation prompt. Must be a clear, detailed description "
+                        "of the desired image, including visual elements, actions, expressions, "
+                        "colors, and lighting. Always provide the full descriptive text, "
+                        "not just a preset name."
+                    ),
                 },
                 "preset_name": {
                     "type": "string",
-                    "description": ("When filling in this parameter for the first time,"
-"you also need to use banana_preset_prompt tool to retrieve the full content of"
-"that preset prompt. If your prompt is a modification based on a preset prompt,"
-"this field must retain the original preset name so the tool can retrieve"
-"the correct generation parameters."),
+                    "description": (
+                        "Optional preset name. If used for the first time, also call "
+                        "banana_preset_prompt to retrieve the full preset content. "
+                        "Keep this field if your prompt is based on a preset."
+                    ),
                 },
                 "referer_id": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": ("If the user requests to use another person's avatar,"
-"please enter the target user's ID here. Pass this parameter together with the prompt parameter."),
+                    "description": (
+                        "Target user IDs whose avatars should be used as reference images. "
+                        "Pass together with the prompt parameter."
+                    ),
                 },
             },
             "required": ["prompt"],

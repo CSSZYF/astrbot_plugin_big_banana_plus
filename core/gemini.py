@@ -1,4 +1,5 @@
 import json
+import re
 
 from curl_cffi.requests.exceptions import Timeout
 
@@ -46,6 +47,7 @@ class GeminiProvider(BaseProvider):
             result = response.json()
             if response.status_code == 200:
                 b64_images = []
+                images_url = []
                 for item in result.get("candidates", []):
                     # 检查 finishReason 状态
                     finishReason = item.get("finishReason", "")
@@ -55,13 +57,27 @@ class GeminiProvider(BaseProvider):
                             if "inlineData" in part and "data" in part["inlineData"]:
                                 data = part["inlineData"]
                                 b64_images.append((data["mimeType"], data["data"]))
+                            elif "text" in part:
+                                text_content = part.get("text", "")
+                                urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", text_content)
+                                urls = list(dict.fromkeys(urls))
+                                for img_src in urls:
+                                    if img_src.startswith("data:image/"):
+                                        try:
+                                            header, base64_data = img_src.split(",", 1)
+                                            mime = header.split(";")[0].replace("data:", "")
+                                            b64_images.append((mime, base64_data))
+                                        except Exception:
+                                            pass
+                                    else:
+                                        images_url.append(img_src)
                     else:
                         logger.warning(
                             f"[BIG BANANA] 图片生成失败, 响应内容: {response.text[:1024]}"
                         )
                         return None, 200, f"图片生成失败，原因: {finishReason}"
                 # 最后再检查是否有图片数据
-                if not b64_images:
+                if not images_url and not b64_images:
                     logger.warning(
                         f"[BIG BANANA] 请求成功，但未返回图片数据, 响应内容: {response.text[:1024]}"
                     )
@@ -72,6 +88,11 @@ class GeminiProvider(BaseProvider):
                             f"请求被内容安全系统拦截，原因：{result.get('promptFeedback', {}).get('blockReason', '未获取到原因')}",
                         )
                     return None, 200, "响应中未包含图片数据"
+                # 下载图片并转换为 base64
+                if images_url:
+                    b64_images += await self.downloader.fetch_images(images_url)
+                if not b64_images:
+                    return None, 200, "图片下载失败"
                 return b64_images, 200, None
             else:
                 logger.error(
@@ -128,6 +149,8 @@ class GeminiProvider(BaseProvider):
             result = data.decode("utf-8")
             if response.status_code == 200:
                 b64_images = []
+                images_url = []
+                full_content = ""
                 for line in result.splitlines():
                     if line.startswith("data: "):
                         line_data = line[len("data: ") :].strip()
@@ -147,13 +170,33 @@ class GeminiProvider(BaseProvider):
                                         b64_images.append(
                                             (data["mimeType"], data["data"])
                                         )
+                                    elif "text" in part:
+                                        full_content += part.get("text", "")
                         except json.JSONDecodeError:
                             continue
-                if not b64_images:
+                # 合并处理完整响应以提取图片URL
+                urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", full_content)
+                urls = list(dict.fromkeys(urls))
+                for img_src in urls:
+                    if img_src.startswith("data:image/"):
+                        try:
+                            header, base64_data = img_src.split(",", 1)
+                            mime = header.split(";")[0].replace("data:", "")
+                            b64_images.append((mime, base64_data))
+                        except Exception:
+                            pass
+                    else:
+                        images_url.append(img_src)
+                
+                if not images_url and not b64_images:
                     logger.warning(
                         f"[BIG BANANA] 请求成功，但未返回图片数据, 响应内容: {result[:1024]}"
                     )
                     return None, 200, "响应中未包含图片数据"
+                if images_url:
+                    b64_images += await self.downloader.fetch_images(images_url)
+                if not b64_images:
+                    return None, 200, "图片下载失败"
                 return b64_images, 200, None
             else:
                 logger.error(

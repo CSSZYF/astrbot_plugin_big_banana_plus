@@ -51,13 +51,17 @@ class OpenAIChatProvider(BaseProvider):
                     finish_reason = item.get("finish_reason", "")
                     if finish_reason == "stop":
                         content = item.get("message", {}).get("content", "")
-                        match = re.search(r"!\[.*?\]\((.*?)\)", content)
-                        if match:
-                            img_src = match.group(1)
+                        urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", content)
+                        # 去重但保持原始顺序
+                        urls = list(dict.fromkeys(urls))
+                        for img_src in urls:
                             if img_src.startswith("data:image/"):  # base64
-                                header, base64_data = img_src.split(",", 1)
-                                mime = header.split(";")[0].replace("data:", "")
-                                b64_images.append((mime, base64_data))
+                                try:
+                                    header, base64_data = img_src.split(",", 1)
+                                    mime = header.split(";")[0].replace("data:", "")
+                                    b64_images.append((mime, base64_data))
+                                except Exception:
+                                    pass
                             else:  # URL
                                 images_url.append(img_src)
                     else:
@@ -135,6 +139,7 @@ class OpenAIChatProvider(BaseProvider):
                 b64_images = []
                 images_url = []
                 reasoning_content = ""
+                full_content = ""
                 for line in result.splitlines():
                     if line.startswith("data: "):
                         line_data = line[len("data: ") :].strip()
@@ -142,24 +147,25 @@ class OpenAIChatProvider(BaseProvider):
                             break
                         try:
                             json_data = json.loads(line_data)
-                            # 遍历 json_data，检查是否有图片
                             for item in json_data.get("choices", []):
-                                content = item.get("delta", {}).get("content", "")
-                                match = re.search(r"!\[.*?\]\((.*?)\)", content)
-                                if match:
-                                    img_src = match.group(1)
-                                    if img_src.startswith("data:image/"):  # base64
-                                        header, base64_data = img_src.split(",", 1)
-                                        mime = header.split(";")[0].replace("data:", "")
-                                        b64_images.append((mime, base64_data))
-                                    else:  # URL
-                                        images_url.append(img_src)
-                                else:  # 尝试查找失败的原因或者纯文本返回结果
-                                    reasoning_content += item.get("delta", {}).get(
-                                        "reasoning_content", ""
-                                    )
+                                delta = item.get("delta", {})
+                                full_content += delta.get("content", "")
+                                reasoning_content += delta.get("reasoning_content", "")
                         except json.JSONDecodeError:
                             continue
+                # 遍历组装的完整内容，使用正则匹配全部图片链接或Base64
+                urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", full_content)
+                urls = list(dict.fromkeys(urls))
+                for img_src in urls:
+                    if img_src.startswith("data:image/"):  # base64
+                        try:
+                            header, base64_data = img_src.split(",", 1)
+                            mime = header.split(";")[0].replace("data:", "")
+                            b64_images.append((mime, base64_data))
+                        except Exception:
+                            pass
+                    else:  # URL
+                        images_url.append(img_src)
                 if not images_url and not b64_images:
                     logger.warning(
                         f"[BIG BANANA] 请求成功，但未返回图片数据, 响应内容: {result[:1024]}"

@@ -48,34 +48,35 @@ class GeminiProvider(BaseProvider):
             if response.status_code == 200:
                 b64_images = []
                 images_url = []
+                failed_reason = ""  # 记录失败原因，仅在没有图片时使用
                 for item in result.get("candidates", []):
-                    # 检查 finishReason 状态
                     finishReason = item.get("finishReason", "")
-                    if finishReason == "STOP":
-                        parts = item.get("content", {}).get("parts", [])
-                        for part in parts:
-                            if "inlineData" in part and "data" in part["inlineData"]:
-                                data = part["inlineData"]
-                                b64_images.append((data["mimeType"], data["data"]))
-                            elif "text" in part:
-                                text_content = part.get("text", "")
-                                urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", text_content)
-                                urls = list(dict.fromkeys(urls))
-                                for img_src in urls:
-                                    if img_src.startswith("data:image/"):
-                                        try:
-                                            header, base64_data = img_src.split(",", 1)
-                                            mime = header.split(";")[0].replace("data:", "")
-                                            b64_images.append((mime, base64_data))
-                                        except Exception:
-                                            pass
-                                    else:
-                                        images_url.append(img_src)
-                    else:
+                    # 如果有明确的非STOP失败原因，记录下来但不立即返回
+                    if finishReason and finishReason != "STOP" and finishReason != "null":
+                        failed_reason = finishReason
                         logger.warning(
-                            f"[BIG BANANA] 图片生成失败, 响应内容: {response.text[:1024]}"
+                            f"[BIG BANANA] candidate finishReason={finishReason}, 响应内容: {response.text[:512]}"
                         )
-                        return None, 200, f"图片生成失败，原因: {finishReason}"
+                    # 无论 finishReason 是什么，都尝试采集 parts 里的图片内容
+                    parts = item.get("content", {}).get("parts", [])
+                    for part in parts:
+                        if "inlineData" in part and "data" in part["inlineData"]:
+                            data = part["inlineData"]
+                            b64_images.append((data["mimeType"], data["data"]))
+                        elif "text" in part:
+                            text_content = part.get("text", "")
+                            urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", text_content)
+                            urls = list(dict.fromkeys(urls))
+                            for img_src in urls:
+                                if img_src.startswith("data:image/"):
+                                    try:
+                                        header, base64_data = img_src.split(",", 1)
+                                        mime = header.split(";")[0].replace("data:", "")
+                                        b64_images.append((mime, base64_data))
+                                    except Exception:
+                                        pass
+                                else:
+                                    images_url.append(img_src)
                 # 最后再检查是否有图片数据
                 if not images_url and not b64_images:
                     logger.warning(

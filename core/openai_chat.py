@@ -46,29 +46,30 @@ class OpenAIChatProvider(BaseProvider):
             if response.status_code == 200:
                 b64_images = []
                 images_url = []
+                failed_reason = ""  # 记录失败原因，仅在没有图片时使用
                 for item in result.get("choices", []):
-                    # 检查 finish_reason 状态
                     finish_reason = item.get("finish_reason", "")
-                    if finish_reason == "stop":
-                        content = item.get("message", {}).get("content", "")
-                        urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", content)
-                        # 去重但保持原始顺序
-                        urls = list(dict.fromkeys(urls))
-                        for img_src in urls:
-                            if img_src.startswith("data:image/"):  # base64
-                                try:
-                                    header, base64_data = img_src.split(",", 1)
-                                    mime = header.split(";")[0].replace("data:", "")
-                                    b64_images.append((mime, base64_data))
-                                except Exception:
-                                    pass
-                            else:  # URL
-                                images_url.append(img_src)
-                    else:
+                    # 如果有明确的非stop失败原因，记录下来但不立即返回
+                    if finish_reason and finish_reason != "stop" and finish_reason != "null":
+                        failed_reason = finish_reason
                         logger.warning(
-                            f"[BIG BANANA] 图片生成失败, 响应内容: {response.text[:1024]}"
+                            f"[BIG BANANA] choice finish_reason={finish_reason}, 响应内容: {response.text[:512]}"
                         )
-                        return None, 200, f"图片生成失败: {finish_reason}"
+                    # 无论 finish_reason 是什么，都尝试采集 content 里的图片内容
+                    content = item.get("message", {}).get("content", "") or ""
+                    urls = re.findall(r"(?:https?://[^\s\>\]\)]+|data:image/[-\w]+;base64,[A-Za-z0-9+/=]+)", content)
+                    # 去重但保持原始顺序
+                    urls = list(dict.fromkeys(urls))
+                    for img_src in urls:
+                        if img_src.startswith("data:image/"):  # base64
+                            try:
+                                header, base64_data = img_src.split(",", 1)
+                                mime = header.split(";")[0].replace("data:", "")
+                                b64_images.append((mime, base64_data))
+                            except Exception:
+                                pass
+                        else:  # URL
+                            images_url.append(img_src)
                 # 最后再检查是否有图片数据
                 if not images_url and not b64_images:
                     logger.warning(
